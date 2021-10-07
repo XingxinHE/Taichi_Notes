@@ -593,19 +593,69 @@ As you see above, the field is composed by **2** parts:
 
 ### 3.4.1.Access scalar fields
 
-:lock:field:    `ti.field(dtype=ti.f32, shape=(10, 20, 30)`
+:lock:field:    `heat_volume=ti.field(dtype=ti.f32, shape=(10, 20, 30))`
 
-:thinking:analyze:     **dimension**:3,x-y-z;  **type**: a scalar
+:thinking:analyze:     **dimension**:3,x-y-z;  **type**: scalar
 
-:key:access:    
-
-
+:key:access:    `heat_volume[i,j,k]` is a scalar
 
 
 
-:warning: You **MUST** use `[None]` to access the 0-dimension field. e.g.
+:lock:field:    `pixels=ti.field(dtype=ti.f32, shape=(1920, 1080))`
 
-The 0-D matrix field `x = ti.Matrix.field(n=3, m=4, dtype=ti.f32, shape=())`
+:thinking:analyze:     **dimension**:2,x-y;  **type**: scalar
+
+:key:access:    `pixels[i,j]` is a scalar
+
+
+
+:lock:field:    `my_birthday=ti.field(dtype=ti.i32, shape=())`
+
+:thinking:analyze:     **dimension**:0, None;  **type**: scalar
+
+:key:access:    `my_birthday[None]=28`
+
+
+
+### 3.4.2.Access vector fields
+
+:lock:field:    `force_field = ti.Vector.field(n=3, dtype=ti.f32, shape=(x, y, z))`
+
+:thinking:analyze:     **dimension**:3, x-y-z;  **type**: vector
+
+:key:access:    `force_field[i,j,k]` is a $3$-vector,  `force_field[i,j,k][p]=13` is a scalar
+
+
+
+:lock:field:    `unit_x = ti.Vector.field(n=3, dtype=ti.f32, shape=())`
+
+:thinking:analyze:     **dimension**:0, None;  **type**: vector
+
+:key:access:    `unit_x[None]` is a $3$-vector, `unit_x[None][1]=13` is a scalar which is the 2nd scalar in vector.
+
+
+
+### 3.4.3.Access matrix fields
+
+:lock:field:    `strain_tensor_field = ti.Matrix.field(n=3, m=3, dtype=ti.f32, shape=(x, y, z))`
+
+:thinking:analyze:     **dimension**:3, x-y-z;  **type**: matrix
+
+:key:access:    `strain_tensor_field[i,j,k]` is a $3\cross 3$-matrix, `strain_tensor_field[i,j,k][p,q]=13` is a scalar which is in the $p$-row and $q$-column.
+
+
+
+:lock:field:    `x = ti.Matrix.field(n=3, m=4, dtype=ti.f32, shape=())`
+
+:thinking:analyze:     **dimension**:0, None;  **type**: matrix
+
+:key:access:    `X[None]` is a $3\cross 4$-matrix, `X[None][p,q]=13` is a scalar which is in the $p$-row and $q$-column.
+
+
+
+
+
+:warning: You **MUST** use `[None]` to access the 0-dimension field.
 
 <img src="img/image-20211007095714342.png" alt="image-20211007095714342" style="zoom:50%;" />
 
@@ -614,6 +664,60 @@ You can access it like `x[None][p, q]`  ,  `p` is the row index, `q` is the colu
 
 
 
+
+## 3.5.Struct fields
+
+:pushpin: **What is struct fields?**
+
+a.k.a. It is field with  **user-defined** struct. Compare to taichi-defined fields, you just need to specify the "**type**" part.
+
+
+
+```python
+particle_field = ti.Struct.field({
+    "pos": ti.types.vector(3, ti.f32),
+    "vel": ti.types.vector(3, ti.f32),
+    "acc": ti.types.vector(3, ti.f32),
+    "mass": ti.f32,
+  }, shape=(n,))
+```
+
+:thinking:analyze:     **dimension**:1, x;  **type**: user-defined type in dict format.
+
+
+
+This can be done with compound type:
+
+```python
+vec3f = ti.types.vector(3, ti.f32)
+particle = ti.types.struct(
+  pos=vec3f, vel=vec3f, acc=vec3f, mass=ti.f32,
+)
+particle_field = particle.field(shape=(n,))
+```
+
+
+
+:pushpin:**How to use it?**
+
+Members of a struct field can be accessed either locally or globally:
+
+`locallly` here means the very inner value
+
+`globally` here means the value or "property" can be modify in global
+
+```python
+# set the position of the first particle to origin
+particle_field[0] # local ti.Struct
+particle_field[0].pos = ti.Vector([0.0, 0.0, 0.0])
+
+# access the 2nd particle, and set the 1st value as 1.0
+particle_field[1].pos[0] = 1.0
+
+# make the mass of all particles be 1
+particle_field.mass # global ti.Vector.field
+particle_field.mass.fill(1.0)
+```
 
 
 
